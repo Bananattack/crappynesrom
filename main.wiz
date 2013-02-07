@@ -1,0 +1,93 @@
+let K = 1024
+bank header : rom * 16
+bank ram : ram * 2 * K
+bank prg : rom * 16 * K
+bank chr : rom * 8 * K
+
+in header, 0x00:
+    do
+        let mirroring = 1
+        let battery = 0
+        let fourscreen = 0
+        let mapper = 0
+
+        // 0..3: "NES" followed by MS-DOS end-of-file marker.
+        byte * 4: "NES", 0x1A
+        // 4: Number of 16K PRG ROM banks
+        byte: 1
+        // 5: Number of 8K CHR ROM banks
+        byte: 1
+        // 6: The "Flags 6" byte, skip the 'trainer' flag for now.
+        byte: (mirroring) | (battery << 1) | (fourscreen << 3) | ((mapper & 0xF) << 4)
+        // 7: The "Flags 7" byte, just the mapper part though.
+        byte: (mapper >> 4)
+        // 8: Number of 8K PRG RAM banks -- for now just write a 0, which implies 8KB PRG RAM at most.
+        byte: 0
+        // 9..15: Ignore other flag fields. Zero-pad this header to 16 bytes.
+        byte * 7: 0, 0, 0, 0, 0, 0, 0
+    end
+
+in ram, 0x00:
+    var t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15 : byte
+    
+in prg, 0xC000:
+    include 'hardware.wiz'
+
+    func main do
+        // Set necessary processor flags.
+        decimal = 0
+        interrupt = 1
+        // Prepare stack.
+        s = 0xFF via x
+        
+        // Turn off rendering.
+        [nes.ppu.ctrl] = 0 via x
+        [nes.ppu.mask] = x
+        
+        // Wait for the PPU to be ready to use, which takes 2 vertical blanks.
+        loop
+            loop
+                compare a & [nes.ppu.status]
+            until negative end
+            x++
+            compare x to 2 
+        until == end
+        
+        x = 0
+        loop
+            [0x000:x] = 0 via a
+            x++
+        until zero end
+
+        
+
+        loop
+        end
+    end
+    
+    task draw do
+        push a
+        push x via a
+        push y via a
+        a = [nes.ppu.status]
+        y = pop via a
+        x = pop via a
+        a = pop
+    end
+    
+    task scan do
+        push a
+        push x via a
+        push y via a
+        y = pop via a
+        x = pop via a
+        a = pop
+    end
+
+in prg, 0xFFFA:
+    word: draw, main, scan
+    
+in chr, 0x0000:
+    
+
+
