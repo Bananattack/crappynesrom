@@ -59,7 +59,15 @@ in prg, 0xC000:
             x++
         until zero end
 
-        
+        [nes.ppu.address] = >nes.ppu.PALETTE_BASE via a
+        [nes.ppu.address] = <nes.ppu.PALETTE_BASE via a
+        x = 0
+        loop
+            [nes.ppu.data] = [palette:x] via a
+            x++
+            compare x to 16
+            until ==
+        end
 
         loop
         end
@@ -84,10 +92,16 @@ in prg, 0xC000:
         a = pop
     end
 
+def palette:
+    byte: 0x0F, 0x00, 0x10, 0x30
+    byte: 0x0F, 0x00, 0x10, 0x30
+    byte: 0x0F, 0x00, 0x10, 0x30
+    byte: 0x0F, 0x00, 0x10, 0x30
+
 in prg, 0xFFFA:
     word: draw, main, scan
     
 in chr, 0x0000:
-    
+    embed 'molasses.chr'
 
 
